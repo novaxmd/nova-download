@@ -1,22 +1,38 @@
-// index.js const express = require("express"); const puppeteer = require("puppeteer"); const app = express(); const port = process.env.PORT || 3000;
+const express = require("express");
+const axios = require("axios");
+const cors = require("cors");
 
-app.get("/api/facebook", async (req, res) => { const videoUrl = req.query.url; if (!videoUrl) return res.status(400).json({ error: "Missing Facebook video URL" });
+const app = express();
+app.use(cors());
 
-try { const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] }); const page = await browser.newPage(); await page.goto("https://www.fbdown.net/", { waitUntil: "networkidle2" });
+app.get("/", (req, res) => {
+  res.send("✅ Facebook Video Downloader API by B.M.B-TECH is running.");
+});
 
-await page.type("#url", videoUrl);
-await page.click("#send");
-await page.waitForSelector(".button.is-success.is-fullwidth", { timeout: 15000 });
+app.get("/fb", async (req, res) => {
+  const videoUrl = req.query.url;
+  if (!videoUrl) return res.status(400).json({ error: "Missing Facebook video URL." });
 
-const downloadLink = await page.$eval(".button.is-success.is-fullwidth", el => el.href);
-await browser.close();
+  try {
+    const api = `https://fb-video-downloader-api.vercel.app/api/facebook?url=${encodeURIComponent(videoUrl)}`;
+    const response = await axios.get(api);
 
-res.json({ success: true, download: downloadLink });
+    if (!response.data || !response.data.url) {
+      return res.status(404).json({ error: "Video not found or not downloadable." });
+    }
 
-} catch (error) { console.error("Error fetching video:", error); res.status(500).json({ success: false, error: "Failed to get download link." }); } });
+    res.json({
+      status: true,
+      message: "Facebook video fetched successfully.",
+      data: {
+        title: response.data.title || "Facebook Video",
+        url: response.data.url
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch video.", details: error.message });
+  }
+});
 
-app.get("/", (req, res) => { res.send("✅ Facebook Video Downloader API by B.M.B-TECH is running!"); });
-
-app.listen(port, () => { console.log(✅ API running on http://localhost:${port}); });
-
-  
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
