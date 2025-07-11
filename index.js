@@ -1,38 +1,33 @@
 const express = require("express");
 const axios = require("axios");
-const cors = require("cors");
-
 const app = express();
-app.use(cors());
 
 app.get("/", (req, res) => {
-  res.send("✅ Facebook Video Downloader API by B.M.B-TECH is running.");
+  res.send("Facebook Video API by BMB-XMD is Live ✅");
 });
 
 app.get("/fb", async (req, res) => {
-  const videoUrl = req.query.url;
-  if (!videoUrl) return res.status(400).json({ error: "Missing Facebook video URL." });
+  const url = req.query.url;
+  if (!url || !url.startsWith("http")) {
+    return res.status(400).json({ success: false, message: "Invalid URL" });
+  }
 
   try {
-    const api = `https://fb-video-downloader-api.vercel.app/api/facebook?url=${encodeURIComponent(videoUrl)}`;
-    const response = await axios.get(api);
-
-    if (!response.data || !response.data.url) {
-      return res.status(404).json({ error: "Video not found or not downloadable." });
+    const result = await axios.get(`https://www.getfvid.com/downloader?url=${encodeURIComponent(url)}`);
+    const matches = result.data.match(/href="(https:\/\/[^"]+\.mp4)"/);
+    if (!matches || !matches[1]) {
+      return res.status(404).json({ success: false, message: "Video not found" });
     }
 
-    res.json({
-      status: true,
-      message: "Facebook video fetched successfully.",
-      data: {
-        title: response.data.title || "Facebook Video",
-        url: response.data.url
-      }
+    return res.json({
+      success: true,
+      url: matches[1],
     });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch video.", details: error.message });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Server running on port ${port}`));
